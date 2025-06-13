@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card } from '@/components/ui/card';
@@ -8,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Shield, Mail, Lock, User, Eye, EyeOff } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useNavigate } from 'react-router-dom';
 
 const AuthPage = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -17,6 +17,7 @@ const AuthPage = () => {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,6 +34,7 @@ const AuthPage = () => {
           title: "Welcome back!",
           description: "You've successfully logged in.",
         });
+        navigate('/');
       } else {
         const { error } = await supabase.auth.signUp({
           email,
@@ -49,6 +51,7 @@ const AuthPage = () => {
           title: "Account created!",
           description: "Please check your email to verify your account.",
         });
+        setIsLogin(true);
       }
     } catch (error: any) {
       toast({

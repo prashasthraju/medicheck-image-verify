@@ -1,0 +1,5 @@
+tensorflow==2.14.0
+tensorflowjs==4.15.0
+numpy==1.24.3
+Pillow==10.2.0
+supabase==2.3.0 

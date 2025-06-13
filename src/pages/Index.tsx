@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
@@ -61,9 +60,9 @@ const Index = () => {
             </div>
           )}
           
-          <Alert className="max-w-2xl mx-auto mb-12 border-amber-200 bg-amber-50">
-            <AlertTriangle className="h-4 w-4 text-amber-600" />
-            <AlertDescription className="text-amber-800">
+          <Alert className="max-w-2xl mx-auto mb-12 border-sky-200 bg-sky-50">
+            <AlertTriangle className="h-4 w-4 text-sky-600" />
+            <AlertDescription className="text-sky-800">
               <strong>Important:</strong> This tool is for preliminary screening only. 
               Always consult healthcare professionals for final verification and medical advice.
             </AlertDescription>
