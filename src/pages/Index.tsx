@@ -1,13 +1,29 @@
 
 import React from 'react';
+import { useAuth } from '@/hooks/useAuth';
+import { useNavigate } from 'react-router-dom';
 import Header from '@/components/Header';
 import ImageUpload from '@/components/ImageUpload';
 import StatsSection from '@/components/StatsSection';
 import FeaturesSection from '@/components/FeaturesSection';
+import UserProfile from '@/components/UserProfile';
+import AnalysisHistory from '@/components/AnalysisHistory';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { AlertTriangle, Info } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { AlertTriangle, Info, LogIn } from 'lucide-react';
 
 const Index = () => {
+  const { user, loading } = useAuth();
+  const navigate = useNavigate();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-medical-blue"></div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
       <Header />
@@ -33,6 +49,18 @@ const Index = () => {
             with 99.2% accuracy.
           </p>
           
+          {!user && (
+            <div className="mb-8">
+              <Button 
+                onClick={() => navigate('/auth')}
+                className="medical-gradient text-white px-8 py-3 text-lg font-medium hover:opacity-90 transition-opacity"
+              >
+                <LogIn className="h-5 w-5 mr-2" />
+                Get Started - Sign Up Free
+              </Button>
+            </div>
+          )}
+          
           <Alert className="max-w-2xl mx-auto mb-12 border-amber-200 bg-amber-50">
             <AlertTriangle className="h-4 w-4 text-amber-600" />
             <AlertDescription className="text-amber-800">
@@ -42,6 +70,13 @@ const Index = () => {
           </Alert>
         </div>
 
+        {/* User Profile */}
+        {user && (
+          <div className="mb-8">
+            <UserProfile />
+          </div>
+        )}
+
         {/* Stats Section */}
         <StatsSection />
 
@@ -49,6 +84,13 @@ const Index = () => {
         <div className="mb-16">
           <ImageUpload />
         </div>
+
+        {/* Analysis History */}
+        {user && (
+          <div className="mb-16">
+            <AnalysisHistory />
+          </div>
+        )}
 
         {/* Features Section */}
         <FeaturesSection />

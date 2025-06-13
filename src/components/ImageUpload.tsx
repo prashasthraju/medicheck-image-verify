@@ -4,6 +4,9 @@ import { Upload, FileImage, AlertCircle, CheckCircle, Loader2, X } from 'lucide-
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
+import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 interface UploadedImage {
   id: string;
@@ -15,12 +18,14 @@ interface UploadedImage {
 interface AnalysisResult {
   id: string;
   verdict: 'authentic' | 'fake' | 'uncertain';
-  confidence: number;
-  details: string;
-  timestamp: Date;
+  confidence_score: number;
+  analysis_details: string;
+  created_at: string;
 }
 
 const ImageUpload = () => {
+  const { user } = useAuth();
+  const { toast } = useToast();
   const [uploadedImages, setUploadedImages] = useState<UploadedImage[]>([]);
   const [analysisResults, setAnalysisResults] = useState<AnalysisResult[]>([]);
   const [dragActive, setDragActive] = useState(false);
@@ -53,74 +58,92 @@ const ImageUpload = () => {
     }
   };
 
-  const handleFiles = (files: File[]) => {
+  const handleFiles = async (files: File[]) => {
+    if (!user) {
+      toast({
+        title: "Authentication required",
+        description: "Please sign in to analyze medicine images.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     const imageFiles = files.filter(file => file.type.startsWith('image/'));
     
-    imageFiles.forEach(file => {
+    for (const file of imageFiles) {
       const id = Math.random().toString(36).substr(2, 9);
-      const url = URL.createObjectURL(file);
       
-      const newImage: UploadedImage = {
-        id,
-        name: file.name,
-        url,
-        file
-      };
-      
-      setUploadedImages(prev => [...prev, newImage]);
-      
-      // Simulate upload progress
-      simulateUpload(() => {
-        analyzeImage(newImage);
-      });
-    });
-  };
+      try {
+        // Upload to Supabase Storage
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${user.id}/${id}.${fileExt}`;
+        
+        setUploadProgress(0);
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('medicine-images')
+          .upload(fileName, file);
 
-  const simulateUpload = (callback: () => void) => {
-    setUploadProgress(0);
-    const interval = setInterval(() => {
-      setUploadProgress(prev => {
-        if (prev >= 100) {
-          clearInterval(interval);
-          setTimeout(callback, 500);
-          return 100;
-        }
-        return prev + Math.random() * 15;
-      });
-    }, 100);
+        if (uploadError) throw uploadError;
+
+        const { data: { publicUrl } } = supabase.storage
+          .from('medicine-images')
+          .getPublicUrl(fileName);
+
+        const newImage: UploadedImage = {
+          id,
+          name: file.name,
+          url: publicUrl,
+          file
+        };
+        
+        setUploadedImages(prev => [...prev, newImage]);
+        setUploadProgress(100);
+        
+        // Analyze with AI
+        await analyzeImage(newImage);
+        
+      } catch (error: any) {
+        toast({
+          title: "Upload failed",
+          description: error.message,
+          variant: "destructive",
+        });
+      }
+    }
   };
 
   const analyzeImage = async (image: UploadedImage) => {
     setAnalyzing(image.id);
     
-    // Simulate AI analysis - replace with actual API call
-    await new Promise(resolve => setTimeout(resolve, 3000));
-    
-    // Mock analysis result
-    const verdicts: Array<'authentic' | 'fake' | 'uncertain'> = ['authentic', 'fake', 'uncertain'];
-    const verdict = verdicts[Math.floor(Math.random() * verdicts.length)];
-    const confidence = Math.floor(Math.random() * 30) + 70;
-    
-    const result: AnalysisResult = {
-      id: image.id,
-      verdict,
-      confidence,
-      details: getAnalysisDetails(verdict, confidence),
-      timestamp: new Date()
-    };
-    
-    setAnalysisResults(prev => [...prev, result]);
-    setAnalyzing(null);
-    setUploadProgress(0);
-  };
+    try {
+      const { data, error } = await supabase.functions.invoke('analyze-medicine', {
+        body: {
+          imageUrl: image.url,
+          imageName: image.name,
+          userId: user?.id
+        }
+      });
 
-  const getAnalysisDetails = (verdict: string, confidence: number): string => {
-    const details = {
-      authentic: `Our AI model detected authentic pharmaceutical packaging with ${confidence}% confidence. Key indicators include proper holographic elements, consistent text alignment, and verified batch codes.`,
-      fake: `Warning: Potential counterfeit detected with ${confidence}% confidence. Suspicious elements include irregular packaging quality, incorrect font usage, and missing security features.`,
-      uncertain: `Analysis inconclusive with ${confidence}% confidence. The image quality or angle may be affecting detection. Consider uploading additional images for better analysis.`
-    };
-    return details[verdict as keyof typeof details];
+      if (error) throw error;
+
+      setAnalysisResults(prev => [...prev, data]);
+      
+      toast({
+        title: "Analysis complete",
+        description: `Medicine ${data.verdict} detected with ${data.confidence_score}% confidence`,
+        variant: data.verdict === 'fake' ? 'destructive' : 'default',
+      });
+      
+    } catch (error: any) {
+      toast({
+        title: "Analysis failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setAnalyzing(null);
+      setUploadProgress(0);
+    }
   };
 
   const removeImage = (id: string) => {
@@ -130,19 +153,39 @@ const ImageUpload = () => {
 
   const getVerdictColor = (verdict: string) => {
     switch (verdict) {
-      case 'authentic': return 'text-medical-green';
-      case 'fake': return 'text-medical-red';
-      default: return 'text-medical-blue';
+      case 'authentic': return 'text-green-600';
+      case 'fake': return 'text-red-600';
+      default: return 'text-blue-600';
     }
   };
 
   const getVerdictIcon = (verdict: string) => {
     switch (verdict) {
-      case 'authentic': return <CheckCircle className="h-5 w-5 text-medical-green" />;
-      case 'fake': return <AlertCircle className="h-5 w-5 text-medical-red" />;
-      default: return <AlertCircle className="h-5 w-5 text-medical-blue" />;
+      case 'authentic': return <CheckCircle className="h-5 w-5 text-green-600" />;
+      case 'fake': return <AlertCircle className="h-5 w-5 text-red-600" />;
+      default: return <AlertCircle className="h-5 w-5 text-blue-600" />;
     }
   };
+
+  if (!user) {
+    return (
+      <Card className="p-12 text-center">
+        <div className="space-y-4">
+          <div className="mx-auto w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center">
+            <Upload className="h-8 w-8 text-gray-400" />
+          </div>
+          <div>
+            <h3 className="text-xl font-semibold text-gray-900 mb-2">
+              Sign in to analyze medicines
+            </h3>
+            <p className="text-gray-600">
+              Create an account or sign in to start using our AI-powered medicine authentication system.
+            </p>
+          </div>
+        </div>
+      </Card>
+    );
+  }
 
   return (
     <div className="w-full max-w-4xl mx-auto space-y-8">
@@ -262,18 +305,18 @@ const ImageUpload = () => {
                                result.verdict === 'fake' ? 'Potential Counterfeit' : 'Uncertain Result'}
                             </span>
                             <span className="text-sm text-gray-500">
-                              {result.confidence}% confidence
+                              {result.confidence_score}% confidence
                             </span>
                           </div>
                           
                           <div className="bg-gray-50 rounded-lg p-4">
                             <p className="text-gray-700 leading-relaxed">
-                              {result.details}
+                              {result.analysis_details}
                             </p>
                           </div>
                           
                           <div className="text-xs text-gray-500">
-                            Analyzed on {result.timestamp.toLocaleString()}
+                            Analyzed on {new Date(result.created_at).toLocaleString()}
                           </div>
                         </div>
                       ) : (
