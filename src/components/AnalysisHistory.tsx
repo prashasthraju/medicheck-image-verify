@@ -38,7 +38,14 @@ const AnalysisHistory = () => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setAnalyses(data || []);
+      
+      // Type assertion to ensure verdict matches our interface
+      const typedData = (data || []).map(item => ({
+        ...item,
+        verdict: item.verdict as 'authentic' | 'fake' | 'uncertain'
+      }));
+      
+      setAnalyses(typedData);
     } catch (error: any) {
       toast({
         title: "Error fetching history",
