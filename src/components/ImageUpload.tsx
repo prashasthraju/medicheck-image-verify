@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback } from 'react';
 import { Upload, FileImage, AlertCircle, CheckCircle, Loader2, X } from 'lucide-react';
 import { Card } from '@/components/ui/card';
@@ -24,7 +23,7 @@ interface AnalysisResult {
 }
 
 const ImageUpload = () => {
-  const { user } = useAuth();
+  // Remove useAuth/user entirely, allow uploads for everyone
   const { toast } = useToast();
   const [uploadedImages, setUploadedImages] = useState<UploadedImage[]>([]);
   const [analysisResults, setAnalysisResults] = useState<AnalysisResult[]>([]);
@@ -59,25 +58,14 @@ const ImageUpload = () => {
   };
 
   const handleFiles = async (files: File[]) => {
-    if (!user) {
-      toast({
-        title: "Authentication required",
-        description: "Please sign in to analyze medicine images.",
-        variant: "destructive",
-      });
-      return;
-    }
-
+    // Remove authentication check (allow uploads regardless of auth)
     const imageFiles = files.filter(file => file.type.startsWith('image/'));
-    
     for (const file of imageFiles) {
       const id = Math.random().toString(36).substr(2, 9);
-      
       try {
-        // Upload to Supabase Storage
+        // Use a default userId or "anonymous" for storage
         const fileExt = file.name.split('.').pop();
-        const fileName = `${user.id}/${id}.${fileExt}`;
-        
+        const fileName = `anonymous/${id}.${fileExt}`;
         setUploadProgress(0);
         const { data: uploadData, error: uploadError } = await supabase.storage
           .from('medicine-images')
@@ -95,13 +83,13 @@ const ImageUpload = () => {
           url: publicUrl,
           file
         };
-        
+
         setUploadedImages(prev => [...prev, newImage]);
         setUploadProgress(100);
-        
+
         // Analyze with AI
         await analyzeImage(newImage);
-        
+
       } catch (error: any) {
         toast({
           title: "Upload failed",
@@ -114,26 +102,26 @@ const ImageUpload = () => {
 
   const analyzeImage = async (image: UploadedImage) => {
     setAnalyzing(image.id);
-    
+
     try {
       const { data, error } = await supabase.functions.invoke('analyze-medicine', {
         body: {
           imageUrl: image.url,
           imageName: image.name,
-          userId: user?.id
+          // No userId
         }
       });
 
       if (error) throw error;
 
       setAnalysisResults(prev => [...prev, data]);
-      
+
       toast({
         title: "Analysis complete",
         description: `Medicine ${data.verdict} detected with ${data.confidence_score}% confidence`,
         variant: data.verdict === 'fake' ? 'destructive' : 'default',
       });
-      
+
     } catch (error: any) {
       toast({
         title: "Analysis failed",
@@ -167,26 +155,7 @@ const ImageUpload = () => {
     }
   };
 
-  if (!user) {
-    return (
-      <Card className="p-12 text-center">
-        <div className="space-y-4">
-          <div className="mx-auto w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center">
-            <Upload className="h-8 w-8 text-gray-400" />
-          </div>
-          <div>
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">
-              Sign in to analyze medicines
-            </h3>
-            <p className="text-gray-600">
-              Create an account or sign in to start using our AI-powered medicine authentication system.
-            </p>
-          </div>
-        </div>
-      </Card>
-    );
-  }
-
+  // Remove "Sign in to analyze" card, so upload UI is always shown
   return (
     <div className="w-full max-w-4xl mx-auto space-y-8">
       {/* Upload Area */}

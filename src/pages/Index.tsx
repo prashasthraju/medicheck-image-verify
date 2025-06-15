@@ -1,27 +1,18 @@
 import React from 'react';
-import { useAuth } from '@/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 import Header from '@/components/Header';
 import ImageUpload from '@/components/ImageUpload';
 import StatsSection from '@/components/StatsSection';
 import FeaturesSection from '@/components/FeaturesSection';
-import UserProfile from '@/components/UserProfile';
-import AnalysisHistory from '@/components/AnalysisHistory';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { AlertTriangle, Info, LogIn } from 'lucide-react';
 
 const Index = () => {
-  const { user, loading } = useAuth();
+  // Don't use useAuth, pretend user is always present
   const navigate = useNavigate();
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-medical-blue"></div>
-      </div>
-    );
-  }
+  // Remove loading check
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
@@ -48,17 +39,7 @@ const Index = () => {
             with 99.2% accuracy.
           </p>
           
-          {!user && (
-            <div className="mb-8">
-              <Button 
-                onClick={() => navigate('/auth')}
-                className="medical-gradient text-white px-8 py-3 text-lg font-medium hover:opacity-90 transition-opacity"
-              >
-                <LogIn className="h-5 w-5 mr-2" />
-                Get Started - Sign Up Free
-              </Button>
-            </div>
-          )}
+          {/* Remove conditional Get Started button; show nothing or leave for marketing link */}
           
           <Alert className="max-w-2xl mx-auto mb-12 border-sky-200 bg-sky-50">
             <AlertTriangle className="h-4 w-4 text-sky-600" />
@@ -69,12 +50,7 @@ const Index = () => {
           </Alert>
         </div>
 
-        {/* User Profile */}
-        {user && (
-          <div className="mb-8">
-            <UserProfile />
-          </div>
-        )}
+        {/* Remove User Profile, always hidden */}
 
         {/* Stats Section */}
         <StatsSection />
@@ -84,13 +60,8 @@ const Index = () => {
           <ImageUpload />
         </div>
 
-        {/* Analysis History */}
-        {user && (
-          <div className="mb-16">
-            <AnalysisHistory />
-          </div>
-        )}
-
+        {/* Remove Analysis History (history table is per-user) */}
+        
         {/* Features Section */}
         <FeaturesSection />
 

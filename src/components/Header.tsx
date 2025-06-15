@@ -1,12 +1,10 @@
-
 import React from 'react';
-import { useAuth } from '@/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 import { Shield, Brain, Zap, LogIn } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 const Header = () => {
-  const { user } = useAuth();
+  // Remove useAuth check: everyone is now considered "not signed in"
   const navigate = useNavigate();
 
   return (
@@ -22,7 +20,6 @@ const Header = () => {
               <p className="text-xs text-gray-600">Pharmaceutical Authentication</p>
             </div>
           </div>
-          
           <div className="flex items-center space-x-8">
             <div className="hidden md:flex items-center space-x-8">
               <div className="flex items-center space-x-2 text-sm text-gray-600">
@@ -38,16 +35,7 @@ const Header = () => {
                 <span>99.2% Accuracy</span>
               </div>
             </div>
-            
-            {!user && (
-              <Button 
-                onClick={() => navigate('/auth')}
-                className="medical-gradient text-white"
-              >
-                <LogIn className="h-4 w-4 mr-2" />
-                Sign In
-              </Button>
-            )}
+            {/* Remove Sign In button */}
           </div>
         </div>
       </div>
